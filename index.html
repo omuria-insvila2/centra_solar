@@ -1,0 +1,933 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador centrals solars</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: scene + controls left, explanation panel right; energy chain, balance and questions full-width below. */
+:root{
+  --bg:#edf2f5; --surface:#fbfcfd; --ink:#15222c; --muted:#556773; --line:#cdd8df; --accent:#1d5c9e;
+  --sky:#d9e9f3; --mtn:#c6d8e3; --earth:#bba889; --earth-line:#a48f6d; --concrete:#c6cbce; --concrete-line:#9aa2a7;
+  --house:#e6eaed; --roof:#7e8b94; --steel:#66727b; --copper:#b8733a;
+  --water:#2f78c4; --water-top:#5b9ad8; --hot-pipe:#f1bcb6; --gas-pipe:#e4d2bd; --air:#9fb4c3;
+  --puff:#ffffff; --smoke:#6d7377; --coal:#2a2a2c; --leaf:#4f8a3c; --trunk:#7a5534; --pv:#1e3f78; --mirror:#9fc3e6;
+  --sun:#ffbf1f; --night:#0b1730; --cloud:#ffffff;
+  --e-pot:#3b55cf; --e-cin:#0c8599; --e-mec:#d9730d; --e-ele:#d4a106; --e-ter:#e03131;
+  --e-qui:#8d5524; --e-nuc:#ae3ec9; --e-rad:#e64980; --e-loss:#868e96;
+  --halo:#fbfcfd; --hl:#1d5c9e; --chip:#e3eaef;
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'Atkinson Hyperlegible',system-ui,-apple-system,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0d151c; --surface:#15202a; --ink:#e2ebf1; --muted:#93a5b2; --line:#2a3946; --accent:#6aa9e8;
+  --sky:#142430; --mtn:#1c303e; --earth:#41372a; --earth-line:#57493a; --concrete:#4c555c; --concrete-line:#66707a;
+  --house:#22303b; --roof:#56636d; --steel:#94a1ab; --copper:#d48b4e;
+  --water:#2563a6; --water-top:#4b8fd4; --hot-pipe:#6e3030; --gas-pipe:#5a4632; --air:#5c7384;
+  --puff:#cdd6dc; --smoke:#8a9096; --coal:#0a0a0b; --leaf:#5fa34a; --trunk:#8a6440; --pv:#2a55a0; --mirror:#5d86ad;
+  --sun:#ffc93c; --night:#03070f; --cloud:#9aa8b3;
+  --e-pot:#8399ff; --e-cin:#3bc9db; --e-mec:#fb923c; --e-ele:#fcc419; --e-ter:#ff6b6b;
+  --e-qui:#c89060; --e-nuc:#da77f2; --e-rad:#f783ac; --e-loss:#8f9aa3;
+  --halo:#15202a; --hl:#6aa9e8; --chip:#1f2d38; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0d151c; --surface:#15202a; --ink:#e2ebf1; --muted:#93a5b2; --line:#2a3946; --accent:#6aa9e8;
+  --sky:#142430; --mtn:#1c303e; --earth:#41372a; --earth-line:#57493a; --concrete:#4c555c; --concrete-line:#66707a;
+  --house:#22303b; --roof:#56636d; --steel:#94a1ab; --copper:#d48b4e;
+  --water:#2563a6; --water-top:#4b8fd4; --hot-pipe:#6e3030; --gas-pipe:#5a4632; --air:#5c7384;
+  --puff:#cdd6dc; --smoke:#8a9096; --coal:#0a0a0b; --leaf:#5fa34a; --trunk:#8a6440; --pv:#2a55a0; --mirror:#5d86ad;
+  --sun:#ffc93c; --night:#03070f; --cloud:#9aa8b3;
+  --e-pot:#8399ff; --e-cin:#3bc9db; --e-mec:#fb923c; --e-ele:#fcc419; --e-ter:#ff6b6b;
+  --e-qui:#c89060; --e-nuc:#da77f2; --e-rad:#f783ac; --e-loss:#8f9aa3;
+  --halo:#15202a; --hl:#6aa9e8; --chip:#1f2d38; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 48px;margin:0}
+.wrap{max-width:1240px;margin:0 auto;display:grid;gap:22px}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.1}
+header{display:grid;gap:6px}
+.eyebrow{font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+h1{font-size:clamp(28px,4.4vw,44px);font-weight:800;letter-spacing:-.01em}
+.intro{max-width:72ch;color:var(--muted);margin:0}
+.modes{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.modes button{border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:9px 16px;border-radius:999px;font-weight:700;font-size:15px}
+.modes button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:20px;align-items:start}
+@media (max-width:940px){.main{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.scene-card{overflow:hidden}
+svg#scene{display:block;width:100%;height:auto}
+
+/* scene */
+.sky{fill:var(--sky)} .mtn{fill:var(--mtn)} .night{fill:var(--night)}
+.earth{fill:var(--earth)} .hatch-line{stroke:var(--earth-line);stroke-width:2} .groundline{stroke:var(--earth-line);stroke-width:2}
+.house{fill:var(--house);stroke:var(--roof);stroke-width:2} .roof{fill:var(--roof)}
+.concrete{fill:var(--concrete);stroke:var(--concrete-line);stroke-width:2}
+.inner{fill:var(--house)}
+.steel{fill:var(--steel)}
+.turb{fill:var(--surface);stroke:var(--steel);stroke-width:3}
+.spin{stroke:var(--e-mec);stroke-width:3;stroke-dasharray:5 6;fill:none}
+.stator{fill:var(--surface);stroke:var(--steel);stroke-width:3}
+.rotor{fill:var(--chip);stroke:var(--e-mec);stroke-width:1.5}
+.glow{fill:var(--e-ele);opacity:0}
+.shaftline{stroke:var(--e-mec);stroke-width:4}
+.cond{fill:var(--surface);stroke:var(--steel);stroke-width:3} .ctube{stroke:var(--water-top);stroke-width:3}
+.ctower{fill:var(--concrete);stroke:var(--concrete-line);stroke-width:2}
+.puff{fill:var(--puff)} .smoke{fill:var(--smoke)} .co2{fill:var(--e-loss)}
+.flame{fill:var(--e-ter)} .flame-in{fill:var(--e-ele)}
+.coal{fill:var(--coal)}
+.pipe-wall{stroke:var(--steel);stroke-width:13;fill:none;stroke-linejoin:round}
+.pipe-in{stroke:var(--water);stroke-width:7;fill:none;stroke-linejoin:round}
+.pipe-in.hot{stroke:var(--hot-pipe)} .pipe-in.gas{stroke:var(--gas-pipe)} .pipe-in.air{stroke:var(--air)}
+.cable{stroke:var(--steel);stroke-width:4;fill:none}
+.cable.ug{stroke-dasharray:2 0}
+.flow{stroke:var(--e-ele);stroke-width:4;fill:none;stroke-dasharray:8 14;stroke-linecap:round;opacity:0}
+.trafo{fill:var(--steel)} .trafo-fin{stroke:var(--surface);stroke-width:2;opacity:.6} .bushing{fill:var(--concrete-line)}
+.tower{stroke:var(--steel);stroke-width:3;fill:none;stroke-linecap:round}
+.wire{stroke:var(--steel);stroke-width:2;fill:none}
+.lbl-s{fill:var(--muted);font:700 12px var(--f-mono);paint-order:stroke;stroke:var(--halo);stroke-width:4px;stroke-linejoin:round}
+.lbl-m{fill:var(--ink);font:700 13px var(--f-body);paint-order:stroke;stroke:var(--halo);stroke-width:4px;stroke-linejoin:round}
+.contain{fill:var(--concrete);stroke:var(--concrete-line);stroke-width:2}
+.vessel{fill:var(--water);stroke:var(--steel);stroke-width:4}
+.fuel{fill:var(--e-nuc)} .fuel-glow{fill:var(--e-nuc)} .crod{fill:var(--ink)}
+.sg{fill:var(--surface);stroke:var(--steel);stroke-width:4}
+.trunk{fill:var(--trunk)} .leaf{fill:var(--leaf)}
+.shed{fill:var(--roof)} .pile{fill:var(--e-qui)}
+.conveyor{stroke:var(--steel);stroke-width:5;fill:none;stroke-linecap:round}
+.filter{fill:var(--concrete);stroke:var(--steel);stroke-width:2}
+.sun{fill:var(--sun)} .sunray{stroke:var(--sun);stroke-width:3;stroke-linecap:round}
+.cloud{fill:var(--cloud)}
+.pv{fill:var(--pv);stroke:var(--steel);stroke-width:1.5} .pvline{stroke:var(--surface);stroke-width:1;opacity:.55}
+.post{stroke:var(--steel);stroke-width:4}
+.mirror{stroke:var(--mirror);stroke-width:6;stroke-linecap:round}
+.ray{stroke:var(--e-rad);stroke-width:2;stroke-dasharray:6 8;fill:none}
+.receptor{fill:var(--steel)} .receptor-glow{fill:var(--e-rad)}
+.tank{fill:var(--surface);stroke:var(--steel);stroke-width:3}
+.salt-h{fill:var(--e-ter)} .salt-c{fill:var(--e-qui);opacity:.75}
+.pipe-in.salt{stroke:var(--hot-pipe)}
+.inset{fill:var(--surface);stroke:var(--line);stroke-width:2}
+.nlayer{fill:#5b8fd8;opacity:.55} .player{fill:#d86b5b;opacity:.5}
+.blade{fill:var(--surface);stroke:var(--steel);stroke-width:2}
+.nacelle{fill:var(--house);stroke:var(--steel);stroke-width:3}
+.gear{fill:var(--surface);stroke:var(--e-mec);stroke-width:3}
+.windline{stroke:var(--e-cin);stroke-width:2.5;stroke-linecap:round}
+.fence{fill:none;stroke:var(--steel);stroke-width:2;stroke-dasharray:4 4}
+.invbox{fill:var(--surface);stroke:var(--steel);stroke-width:3}
+.badge{cursor:pointer}
+.badge circle{fill:var(--ink);stroke:var(--halo);stroke-width:3}
+.badge text{fill:var(--surface);font:700 15px var(--f-mono);text-anchor:middle;dominant-baseline:central}
+.badge.sel circle{fill:var(--accent)}
+.badge:focus{outline:none} .badge:focus-visible circle{stroke:var(--accent);stroke-width:5}
+.part{cursor:pointer;transition:filter .25s}
+.part.sel{filter:drop-shadow(0 0 4px var(--hl)) drop-shadow(0 0 9px var(--hl))}
+@media (max-width:620px){
+  .lbl-s,.lbl-m{display:none}
+  .badge circle{r:25px} .badge text{font-size:25px}
+}
+
+/* part key + legend */
+.partkey{display:flex;flex-wrap:wrap;gap:6px;padding:12px 16px;border-top:1px solid var(--line)}
+.pk{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 12px 5px 5px;font-size:14px;font-weight:700}
+.pk b{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--surface);font:700 13px var(--f-mono)}
+.pk[aria-pressed="true"]{border-color:var(--accent)} .pk[aria-pressed="true"] b{background:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 16px;border-top:1px solid var(--line);font-size:13.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:50%;display:inline-block}
+
+/* controls */
+.controls{display:grid;gap:18px;padding:16px;border-top:1px solid var(--line);align-items:end}
+@media (max-width:700px){.controls{grid-template-columns:minmax(0,1fr)!important}}
+.ctl{display:grid;gap:6px;min-width:0}
+.ctl label{display:flex;justify-content:space-between;gap:10px;font-weight:700;font-size:14.5px}
+.ctl output{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--accent);white-space:nowrap}
+.ctl small{color:var(--muted);font-size:12.5px}
+input[type=range]{width:100%;accent-color:var(--accent);height:28px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--chip);color:var(--ink);padding:9px 14px;border-radius:9px;font-weight:700;font-size:14.5px}
+.btn:hover{border-color:var(--accent)}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--surface);border-color:var(--accent)}
+.btn:focus-visible,.node:focus-visible,.pk:focus-visible,.modes button:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* info panel */
+.info{padding:18px;display:grid;gap:14px;position:sticky;top:max(12px,env(safe-area-inset-top,0px))}
+@media (max-width:940px){.info{position:static}}
+.info h2{font-size:24px;font-weight:800}
+.flowchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13.5px}
+.chipE{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--chip);font-weight:700}
+.chipE i{width:10px;height:10px;border-radius:50%}
+.info p{margin:0}
+.now{background:var(--chip);border-radius:10px;padding:10px 12px;display:grid;gap:2px}
+.now .k{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.now .v{font-family:var(--f-mono);font-size:14.5px;font-variant-numeric:tabular-nums}
+.formula{font-family:var(--f-mono);font-size:14px;border-left:3px solid var(--line);padding-left:10px}
+.loss{color:var(--muted);font-size:14.5px;border-left:3px solid var(--e-loss);padding-left:10px}
+.fact{font-size:14.5px;color:var(--muted)} .fact b{color:var(--ink)}
+.nav{display:flex;justify-content:space-between;gap:8px}
+
+/* blocks */
+section.block{padding:20px;display:grid;gap:16px}
+.block-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline}
+.block h2{font-size:22px;font-weight:800}
+.block .sub{color:var(--muted);font-size:14.5px;margin:0;max-width:70ch}
+.chain{display:grid;align-items:stretch}
+.node{--c:var(--e-pot);text-align:left;background:var(--bg);border:2px solid transparent;border-radius:12px;padding:12px;display:grid;gap:3px;color:var(--ink);min-width:0;align-content:start}
+.node.sel{border-color:var(--c)}
+.node .dot{width:14px;height:14px;border-radius:50%;background:var(--c)}
+.node .nm{font-family:var(--f-display);font-weight:800;font-size:15.5px;line-height:1.15;color:var(--c)}
+.node .wh{font-size:12.5px;color:var(--muted);line-height:1.3}
+.node .val{font-family:var(--f-mono);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums;margin-top:4px}
+.node .bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.node .bar span{display:block;height:100%;background:var(--c);transition:width .3s}
+.conn{display:grid;justify-items:center;align-content:center;gap:2px;padding:0 4px;text-align:center;min-width:0}
+.conn svg{width:56px;height:20px}
+.conn svg path{stroke:var(--muted);stroke-width:2.5;fill:none}
+.conn .where{font-size:12px;font-weight:700;line-height:1.2}
+.conn .ls{font-family:var(--f-mono);font-size:11px;color:var(--muted);line-height:1.25}
+@media (max-width:1060px){
+  .chain.long{grid-template-columns:minmax(0,1fr)!important}
+  .chain.long .conn{grid-template-columns:auto auto minmax(0,1fr);gap:10px;padding:6px 0 6px 14px;justify-content:start;text-align:left;justify-items:start}
+  .chain.long .conn svg{transform:rotate(90deg);width:30px}
+}
+@media (max-width:860px){
+  .chain{grid-template-columns:minmax(0,1fr)!important}
+  .conn{grid-template-columns:auto auto minmax(0,1fr);gap:10px;padding:6px 0 6px 14px;justify-content:start;text-align:left;justify-items:start}
+  .conn svg{transform:rotate(90deg);width:30px}
+}
+.balance{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px}
+@media (max-width:860px){.balance{grid-template-columns:minmax(0,1fr)}}
+.sbar{display:flex;height:34px;border-radius:8px;overflow:hidden;background:var(--line)}
+.sbar span{height:100%;transition:width .3s}
+.bleg{display:grid;gap:6px;margin-top:12px;font-size:14px}
+.bleg div{display:grid;grid-template-columns:14px 1fr auto;gap:8px;align-items:center}
+.bleg i{width:14px;height:14px;border-radius:4px}
+.bleg b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start}
+.stat{background:var(--bg);border-radius:10px;padding:12px;min-width:0}
+.stat .k{font-size:12.5px;color:var(--muted);font-weight:700}
+.stat .v{font-family:var(--f-mono);font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat small{display:block;color:var(--muted);font-size:12px}
+.note{grid-column:1/-1;font-size:14px;color:var(--muted);margin:0}
+.status{font-weight:700;margin:12px 0 0;padding:10px 12px;border-radius:10px;background:var(--chip)}
+.qs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.qs{grid-template-columns:minmax(0,1fr)}}
+details{background:var(--bg);border-radius:10px;padding:12px 14px}
+summary{cursor:pointer;font-weight:700}
+details p{margin:8px 0 0;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow" id="eyebrow"></div>
+    <h1 id="h1"></h1>
+    <p class="intro" id="intro"></p>
+    <div class="modes" id="modes" hidden></div>
+  </header>
+
+  <div class="main">
+    <div class="card scene-card">
+      <svg id="scene" viewBox="0 0 1000 560" role="img" aria-label="Tall de la central"></svg>
+      <div class="partkey" id="partkey" role="group" aria-label="Parts de la central"></div>
+      <div class="legend" id="legend" aria-label="Llegenda de colors"></div>
+      <div class="controls" id="controls"></div>
+    </div>
+
+    <aside class="card info" aria-live="polite">
+      <div class="eyebrow" id="iStep"></div>
+      <h2 id="iName"></h2>
+      <div class="flowchips" id="iChips"></div>
+      <p id="iText"></p>
+      <div class="formula" id="iFormula"></div>
+      <div class="now"><span class="k">Ara mateix</span><span class="v" id="iNow">–</span></div>
+      <p class="loss" id="iLoss"></p>
+      <p class="fact" id="iFact"></p>
+      <div class="nav">
+        <button class="btn" id="prevB" type="button">← Anterior</button>
+        <button class="btn" id="nextB" type="button">Següent →</button>
+      </div>
+    </aside>
+  </div>
+
+  <section class="card block">
+    <div class="block-head">
+      <h2>Cadena de transformacions energètiques</h2>
+      <p class="sub" id="chainSub">Valors en megawatts (MW): és l'energia que passa per cada punt cada segon. 1 MW = 1.000.000 J cada segon.</p>
+    </div>
+    <div class="chain" id="chain"></div>
+  </section>
+
+  <section class="card block">
+    <div class="block-head">
+      <h2>Balanç d'energia</h2>
+      <p class="sub" id="balSub"></p>
+    </div>
+    <div class="balance">
+      <div>
+        <div class="sbar" id="sbar"></div>
+        <div class="bleg" id="bleg"></div>
+        <p class="status" id="status" hidden></p>
+      </div>
+      <div class="stats" id="stats"></div>
+    </div>
+  </section>
+
+  <section class="card block">
+    <div class="block-head"><h2>Per pensar</h2><p class="sub">Prova-ho al simulador abans d'obrir la resposta.</p></div>
+    <div class="qs" id="qs"></div>
+  </section>
+</div>
+
+<script>
+/* ===== Motor comú dels simuladors de centrals ===== */
+const NS = 'http://www.w3.org/2000/svg';
+const $ = id => document.getElementById(id);
+const fmt = (n, d = 1) => (isFinite(n) ? n : 0).toLocaleString('ca-ES', {minimumFractionDigits: d, maximumFractionDigits: d});
+const fmt0 = n => Math.round(isFinite(n) ? n : 0).toLocaleString('ca-ES');
+const mwN = v => v < 10 ? fmt(v, 2) : v < 100 ? fmt(v, 1) : fmt0(v);
+const mw = v => mwN(v) + ' MW';
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const ease = (cur, target, dt, rate) => { const n = cur + (target - cur) * Math.min(1, dt * rate); return Math.abs(target - n) < 1e-4 ? target : n; };
+
+const EN = {
+  pot: ['Energia potencial', '--e-pot'], cin: ['Energia cinètica', '--e-cin'], mec: ['Energia mecànica', '--e-mec'],
+  ele: ['Energia elèctrica', '--e-ele'], ter: ['Energia tèrmica', '--e-ter'], qui: ['Energia química', '--e-qui'],
+  nuc: ['Energia nuclear', '--e-nuc'], rad: ['Energia radiant (llum)', '--e-rad'], loss: ['Energia no aprofitada', '--e-loss']
+};
+const chip = (k, txt) => `<span class="chipE"><i style="background:var(${EN[k][1]})"></i>${txt || EN[k][0]}</span>`;
+const ARROW = '<span aria-hidden="true">→</span>';
+const cv = k => `var(${EN[k][1]})`;
+
+/* ---------- peces de dibuix reutilitzables (SVG) ---------- */
+const C = {
+  bg(g = 470, mtn = true) {
+    return `<defs><pattern id="hatch" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="12" class="hatch-line"/></pattern></defs>
+    <rect class="sky" width="1000" height="560"/>
+    ${mtn ? `<path class="mtn" d="M0,${g - 170} L90,${g - 215} L170,${g - 180} L260,${g - 235} L360,${g - 190} L470,${g - 245} L560,${g - 200} L660,${g - 225} L760,${g - 185} L860,${g - 220} L1000,${g - 190} L1000,${g} L0,${g}Z"/>` : ''}
+    <rect class="earth" x="0" y="${g}" width="1000" height="${560 - g}"/><rect fill="url(#hatch)" x="0" y="${g}" width="1000" height="${560 - g}"/>
+    <line class="groundline" x1="0" y1="${g}" x2="1000" y2="${g}"/>`;
+  },
+  hall(x, y, w, g = 470) {
+    return `<polygon class="roof" points="${x - 8},${y} ${x + w + 8},${y} ${x + w - 12},${y - 16} ${x + 12},${y - 16}"/><rect class="house" x="${x}" y="${y}" width="${w}" height="${g - y}"/>`;
+  },
+  steamTurbine(x, cy, w = 110, hs = 15, hb = 35) {
+    let s = `<polygon class="turb" points="${x},${cy - hs} ${x + w},${cy - hb} ${x + w},${cy + hb} ${x},${cy + hs}"/>`;
+    for (let i = 1; i <= 5; i++) { const xi = x + w * i / 6, h = hs + (hb - hs) * i / 6 - 4; s += `<line class="spin" x1="${xi}" y1="${cy - h}" x2="${xi}" y2="${cy + h}"/>`; }
+    return s;
+  },
+  gen(x, cy, w = 80, h = 50) {
+    let s = `<rect class="stator" x="${x}" y="${cy - h / 2}" width="${w}" height="${h}" rx="8"/>
+      <rect class="glow" x="${x + 5}" y="${cy - h / 2 + 5}" width="${w - 10}" height="${h - 10}" rx="5"/>
+      <rect class="rotor" x="${x + 14}" y="${cy - h / 2 + 12}" width="${w - 28}" height="${h - 24}" rx="4"/>`;
+    for (let i = 1; i <= 3; i++) { const xi = x + 14 + (w - 28) * i / 4; s += `<line class="spin" x1="${xi}" y1="${cy - h / 2 + 14}" x2="${xi}" y2="${cy + h / 2 - 14}"/>`; }
+    return s;
+  },
+  shaft(x1, x2, cy) { return `<line class="shaftline" x1="${x1}" y1="${cy}" x2="${x2}" y2="${cy}"/>`; },
+  condenser(x, y, w = 100, h = 48) {
+    let s = `<rect class="cond" x="${x}" y="${y}" width="${w}" height="${h}" rx="6"/>`;
+    for (let i = 1; i <= 3; i++) s += `<line class="ctube" x1="${x + 8}" y1="${y + h * i / 4}" x2="${x + w - 8}" y2="${y + h * i / 4}"/>`;
+    return s;
+  },
+  coolingTower(x, w, top, g = 470) {
+    const m = g - (g - top) * .5;
+    return `<path class="ctower" d="M${x},${g} Q${x + w * .4},${m} ${x + w * .18},${top} L${x + w * .82},${top} Q${x + w * .6},${m} ${x + w},${g}Z"/>`;
+  },
+  transformer(x, g = 470) {
+    let s = `<rect class="bushing" x="${x + 10}" y="${g - 76}" width="8" height="14" rx="2"/><rect class="bushing" x="${x + 38}" y="${g - 76}" width="8" height="14" rx="2"/>
+      <rect class="trafo" x="${x}" y="${g - 64}" width="56" height="64" rx="4"/>`;
+    for (let i = 0; i < 4; i++) s += `<line class="trafo-fin" x1="${x + 10 + i * 12}" y1="${g - 54}" x2="${x + 10 + i * 12}" y2="${g - 8}"/>`;
+    return s;
+  },
+  tower(cx, top, g = 470) {
+    const L = (y) => (cx - 30) + (y - g) * (22 / (top - g)), R = (y) => (cx + 30) - (y - g) * (22 / (top - g));
+    let d = `M${cx - 30},${g} L${cx - 8},${top} M${cx + 30},${g} L${cx + 8},${top} M${cx - 8},${top} L${cx + 8},${top} M${cx - 54},${top + 22} L${cx + 54},${top + 22} M${cx - 46},${top + 22} L${cx - 46},${top + 32} M${cx + 46},${top + 22} L${cx + 46},${top + 32}`;
+    const steps = 5, hgt = g - top;
+    for (let i = 0; i < steps; i++) {
+      const y1 = g - hgt * i / steps - 4, y2 = g - hgt * (i + 1) / steps + 6;
+      d += ` M${L(y1)},${y1} L${R(y2)},${y2} M${R(y1)},${y1} L${L(y2)},${y2}`;
+    }
+    return `<path class="tower" d="${d}"/>`;
+  },
+  pipe(d, cls = '') { return `<path class="pipe-wall" d="${d}"/><path class="pipe-in ${cls}" d="${d}"/>`; },
+  cable(d) { return `<path class="cable" d="${d}"/><path class="flow" d="${d}"/>`; },
+  badge(n, x, y) { return `<g class="badge" data-stage="${n}" tabindex="0" role="button" aria-label="Part ${n}"><circle cx="${x}" cy="${y}" r="15"/><text x="${x}" y="${y}">${n}</text></g>`; },
+  flame(x, base, h, w) {
+    return `<g class="flamegrp" data-base="${base}"><path class="flame" d="M${x - w / 2},${base} Q${x - w / 2},${base - h * .55} ${x},${base - h} Q${x + w / 2},${base - h * .55} ${x + w / 2},${base} Z"/><path class="flame-in" d="M${x - w / 4},${base} Q${x - w / 4},${base - h * .35} ${x},${base - h * .6} Q${x + w / 4},${base - h * .35} ${x + w / 4},${base} Z"/></g>`;
+  },
+  tree(x, g, s = 1) {
+    return `<rect class="trunk" x="${x - 4 * s}" y="${g - 40 * s}" width="${8 * s}" height="${40 * s}"/><circle class="leaf" cx="${x}" cy="${g - 58 * s}" r="${24 * s}"/><circle class="leaf" cx="${x - 14 * s}" cy="${g - 44 * s}" r="${16 * s}"/><circle class="leaf" cx="${x + 15 * s}" cy="${g - 46 * s}" r="${17 * s}"/>`;
+  },
+  /* bloc de vapor comú: sala, turbina, alternador, condensador, torre de refrigeració, transformador i línia */
+  steamBlock(o) {
+    const {hx, hw = 300, ty = 360, tx, gx, cx0, ctx, ctw = 100, trx, tcx, steamD, feedD, coolD, cableD, st = {turb: 3, gen: 4, cool: 5, trafo: 6, line: 6}} = o;
+    return `
+    <g class="part" data-stage="${st.cool}">${C.coolingTower(ctx, ctw, 236)}</g>
+    ${C.hall(hx, 300, hw)}
+    <g class="part" data-stage="${st.cool}">
+      ${C.pipe(coolD[0], 'hot')}${C.pipe(coolD[1])}
+      ${C.condenser(cx0, 410)}
+      <g id="pCool"></g>
+    </g>
+    <g class="part" data-stage="${st.turb}">
+      ${C.pipe(steamD, 'hot')}
+      ${C.pipe(feedD)}
+      <rect class="turb" x="${tx + 78}" y="${ty + 24}" width="24" height="${410 - ty - 22}"/>
+      ${C.shaft(tx - 14, gx + 90, ty)}
+      ${C.steamTurbine(tx, ty)}
+      <g id="pSteam"></g><g id="pFeed"></g>
+    </g>
+    <g class="part" data-stage="${st.gen}">${C.gen(gx, ty)}</g>
+    <g class="part" data-stage="${st.gen}">${C.cable(cableD)}</g>
+    <g class="part" data-stage="${st.trafo}">${C.transformer(trx)}</g>
+    <g class="part" data-stage="${st.line}">${C.tower(tcx, 240)}
+      <path class="wire" d="M${trx + 42},394 Q${(trx + 42 + tcx - 46) / 2},320 ${tcx - 46},272"/><path class="flow" d="M${trx + 42},394 Q${(trx + 42 + tcx - 46) / 2},320 ${tcx - 46},272"/>
+      <path class="wire" d="M${tcx + 46},272 Q${tcx + 70},276 1000,262"/><path class="flow" d="M${tcx + 46},272 Q${tcx + 70},276 1000,262"/>
+    </g>
+    <g id="plumeCT"></g>`;
+  }
+};
+
+/* ---------- animació ---------- */
+const api = {
+  parts(gid, d, n, r, colorFn) {
+    const g = $(gid); const p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', d); p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'none'); g.appendChild(p);
+    const L = p.getTotalLength(); const arr = [];
+    for (let i = 0; i < n; i++) { const c = document.createElementNS(NS, 'circle'); c.setAttribute('r', r); g.appendChild(c); arr.push({el: c, s: i / n}); }
+    return {
+      step(dt, px, frac) {
+        const vis = Math.round(n * clamp(frac, 0, 1));
+        arr.forEach((q, i) => {
+          if (i >= vis) { q.el.style.display = 'none'; return; }
+          q.el.style.display = '';
+          q.s = (q.s + dt * px / L) % 1;
+          const pt = p.getPointAtLength(q.s * L);
+          q.el.setAttribute('cx', pt.x.toFixed(1)); q.el.setAttribute('cy', pt.y.toFixed(1));
+          q.el.style.fill = colorFn(q.s);
+        });
+      }
+    };
+  },
+  plume(gid, x, y, o = {}) {
+    const {n = 8, cls = 'puff', rise = 34, drift = 16, grow = 12, life = 3.4, r0 = 9} = o;
+    const g = $(gid); const arr = [];
+    for (let i = 0; i < n; i++) { const c = document.createElementNS(NS, 'circle'); c.setAttribute('class', cls); g.appendChild(c); arr.push({el: c, age: life * i / n}); }
+    return {
+      step(dt, k) {
+        arr.forEach(p => {
+          p.age += dt; if (p.age > life) p.age -= life;
+          const a = p.age / life;
+          p.el.setAttribute('cx', (x + drift * p.age).toFixed(1)); p.el.setAttribute('cy', (y - rise * p.age).toFixed(1));
+          p.el.setAttribute('r', (r0 + grow * p.age).toFixed(1));
+          p.el.style.opacity = (k * (1 - a) * Math.min(1, a * 8) * .85).toFixed(3);
+        });
+      }
+    };
+  },
+  rot(id, cx, cy, a) { const e = $(id); if (e) e.setAttribute('transform', `rotate(${a.toFixed(2)} ${cx} ${cy})`); }
+};
+
+/* ---------- estat i interfície ---------- */
+const S = {c: {}, t: {}, running: true, sel: 1, kwh: 0, ang: 0, dash: 0, out: 0, elec: 0, spin: 0};
+let CUR = null, MODES = [], CACHE = {};
+
+function buildControls(cfg) {
+  const box = $('controls');
+  const n = cfg.controls.length;
+  box.style.gridTemplateColumns = `repeat(${n}, minmax(0,1fr)) auto`;
+  box.innerHTML = cfg.controls.map(c => `<div class="ctl">
+      <label for="c_${c.id}">${c.label} <output id="o_${c.id}"></output></label>
+      <input id="c_${c.id}" type="range" min="${c.min}" max="${c.max}" step="${c.step}" value="${S.c[c.id] ?? c.value}">
+      <small id="h_${c.id}"></small></div>`).join('') +
+    `<div class="btns"><button class="btn" id="playB" type="button">${S.running ? 'Pausa' : 'Continua'}</button>${(cfg.buttons || []).map(b => `<button class="btn" type="button" id="b_${b.id}" aria-pressed="${!!S.t[b.id]}">${b.label}</button>`).join('')}</div>`;
+  cfg.controls.forEach(c => {
+    if (S.c[c.id] == null) S.c[c.id] = c.value;
+    const inp = $('c_' + c.id);
+    const upd = () => { S.c[c.id] = +inp.value; $('o_' + c.id).textContent = c.show(S.c[c.id]); };
+    inp.addEventListener('input', upd); upd();
+  });
+  $('playB').addEventListener('click', () => { S.running = !S.running; $('playB').textContent = S.running ? 'Pausa' : 'Continua'; });
+  (cfg.buttons || []).forEach(b => $('b_' + b.id).addEventListener('click', e => { S.t[b.id] = !S.t[b.id]; e.currentTarget.setAttribute('aria-pressed', S.t[b.id]); }));
+}
+function setCtrl(id, v) {
+  S.c[id] = v; const inp = $('c_' + id); if (inp) inp.value = v;
+  const c = CUR.controls.find(x => x.id === id); if (c) $('o_' + id).textContent = c.show(v);
+}
+
+function buildChain(cfg) {
+  const ch = cfg.chain, el = $('chain');
+  const cols = [];
+  let html = '';
+  ch.nodes.forEach((nd, i) => {
+    cols.push('minmax(0,1fr)');
+    html += `<button class="node" type="button" data-stage="${nd.stage}" style="--c:${cv(nd.e)}"><span class="dot"></span><span class="nm">${nd.name}</span><span class="wh">${nd.where}</span><span class="val" id="nv${i}">–</span><span class="bar"><span id="nb${i}"></span></span></button>`;
+    if (i < ch.nodes.length - 1) {
+      cols.push('86px');
+      html += `<div class="conn"><span class="where">${ch.conns[i]}</span><svg viewBox="0 0 56 20" aria-hidden="true"><path d="M2,10 H50 M42,3 L52,10 L42,17"/></svg><span class="ls" id="nc${i}">–</span></div>`;
+    }
+  });
+  el.innerHTML = html;
+  el.style.gridTemplateColumns = cols.join(' ');
+  el.classList.toggle('long', ch.nodes.length > 5);
+}
+
+function buildBalance(cfg) {
+  $('balSub').textContent = cfg.balanceSub || "L'energia no es crea ni es destrueix: es transforma. La que no surt com a electricitat útil es converteix sobretot en calor que va a parar a l'ambient.";
+  $('sbar').innerHTML = cfg.balance.map((b, i) => `<span id="sb${i}" style="background:${b.c};opacity:${b.op ?? 1}"></span>`).join('');
+  $('bleg').innerHTML = cfg.balance.map((b, i) => `<div><i style="background:${b.c};opacity:${b.op ?? 1}"></i>${b.label}<b id="sp${i}">–</b></div>`).join('');
+  const base = [
+    {k: 'Rendiment global', small: 'electricitat útil ÷ energia que entra', id: 'st_eff'},
+    {k: 'Potència a la xarxa', small: 'megawatts (MW)', id: 'st_p'},
+    {k: 'Llars abastides ara', small: 'consum mitjà ≈ 0,4 kW per llar', id: 'st_h'},
+    {k: 'Energia enviada', small: 'kWh des que has obert la pàgina', id: 'st_kwh'}
+  ];
+  $('stats').innerHTML = base.map(b => `<div class="stat"><div class="k">${b.k}</div><div class="v" id="${b.id}">–</div><small>${b.small}</small></div>`).join('') +
+    (cfg.extraLabels || []).map((x, i) => `<div class="stat"><div class="k">${x.k}</div><div class="v" id="sx${i}">–</div><small id="sxs${i}">${x.small || ''}</small></div>`).join('') +
+    `<p class="note" id="note"></p>`;
+}
+
+function select(n) {
+  const cfg = CUR; S.sel = n;
+  document.querySelectorAll('#scene .part').forEach(g => g.classList.toggle('sel', +g.dataset.stage === n));
+  document.querySelectorAll('#scene .badge').forEach(g => g.classList.toggle('sel', +g.dataset.stage === n));
+  document.querySelectorAll('.pk').forEach(b => b.setAttribute('aria-pressed', +b.dataset.stage === n));
+  document.querySelectorAll('.node').forEach(b => b.classList.toggle('sel', +b.dataset.stage === n));
+  const st = cfg.stages[n - 1];
+  $('iStep').textContent = `Part ${n} de ${cfg.stages.length}`;
+  $('iName').textContent = st.name;
+  $('iChips').innerHTML = st.chips;
+  $('iText').textContent = st.text;
+  $('iFormula').textContent = st.formula || ''; $('iFormula').hidden = !st.formula;
+  $('iLoss').textContent = st.loss || ''; $('iLoss').hidden = !st.loss;
+  $('iFact').innerHTML = st.fact || ''; $('iFact').hidden = !st.fact;
+  $('prevB').disabled = n === 1; $('nextB').disabled = n === cfg.stages.length;
+  updateNow();
+}
+function updateNow() { const st = CUR.stages[S.sel - 1]; $('iNow').textContent = st.now ? st.now(S) : '–'; }
+
+function bindSelectables() {
+  document.querySelectorAll('#scene .part, #scene .badge, .pk, .node').forEach(el => {
+    el.addEventListener('click', () => select(+el.dataset.stage));
+    if (el.classList.contains('badge')) el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(+el.dataset.stage); } });
+  });
+}
+
+function mount(cfg) {
+  CUR = cfg;
+  $('eyebrow').textContent = cfg.eyebrow; $('h1').textContent = cfg.title; $('intro').textContent = cfg.intro;
+  $('scene').setAttribute('aria-label', cfg.aria || cfg.title);
+  $('scene').innerHTML = cfg.svg();
+  $('partkey').innerHTML = cfg.stages.map((st, i) => `<button class="pk" type="button" data-stage="${i + 1}"><b>${i + 1}</b>${st.short || st.name}</button>`).join('');
+  $('legend').innerHTML = cfg.legend.map(k => `<span><i style="background:${cv(k)}"></i>${EN[k][0]}</span>`).join('');
+  buildControls(cfg); buildChain(cfg); buildBalance(cfg);
+  $('qs').innerHTML = cfg.questions.map(q => `<details><summary>${q[0]}</summary><p>${q[1]}</p></details>`).join('');
+  CACHE = {
+    spins: [...document.querySelectorAll('#scene .spin')], flows: [...document.querySelectorAll('#scene .flow')],
+    glows: [...document.querySelectorAll('#scene .glow')], flames: [...document.querySelectorAll('#scene .flamegrp')]
+  };
+  cfg.init(S, api);
+  cfg.update(S, 0);
+  bindSelectables();
+  select(1); updateUI();
+}
+
+function updateUI() {
+  const cfg = CUR, s = S;
+  const max = s.barMax || s.nodes[0] || 1;
+  s.nodes.forEach((v, i) => { $('nv' + i).textContent = mw(v); $('nb' + i).style.width = (max > 1e-6 ? clamp(v / max, 0, 1) * 100 : 0) + '%'; });
+  s.conn.forEach((t, i) => { $('nc' + i).textContent = t; });
+  const tot = s.segs.reduce((a, b) => a + b, 0);
+  s.segs.forEach((v, i) => { const p = tot > 1e-6 ? v / tot * 100 : 0; $('sb' + i).style.width = p + '%'; $('sp' + i).textContent = tot > 1e-6 ? fmt(p, 1) + ' %' : '–'; });
+  $('status').hidden = !s.status; $('status').textContent = s.status || '';
+  $('st_eff').textContent = s.eff != null && s.eff > 0 ? fmt(s.eff * 100, 1) + ' %' : '–';
+  $('st_p').textContent = mwN(s.out);
+  $('st_h').textContent = fmt0(s.out * 1000 / 0.4);
+  $('st_kwh').textContent = fmt0(s.kwh);
+  (cfg.extra ? cfg.extra(s) : []).forEach((x, i) => { $('sx' + i).textContent = x.v; if (x.small != null) $('sxs' + i).textContent = x.small; });
+  $('note').innerHTML = cfg.note ? cfg.note(s) : '';
+  cfg.controls.forEach(c => { $('h_' + c.id).textContent = c.help ? c.help(s) : ''; });
+  updateNow();
+}
+
+let last = performance.now(), uiT = 0;
+function frame(t) {
+  const dt = Math.min(.05, (t - last) / 1000); last = t;
+  const s = S, cfg = CUR;
+  cfg.update(s, dt);
+  const rdt = s.running ? dt : 0;
+  if (s.running) { s.ang += dt * (s.spin || 0); s.dash -= dt * (25 + 90 * (s.elec || 0)); s.kwh += s.out * 1000 * dt / 3600; }
+  CACHE.spins.forEach(e => { e.style.strokeDashoffset = (-s.ang * .12).toFixed(1); });
+  const on = s.elec > .003;
+  CACHE.flows.forEach(e => { e.style.opacity = on ? .95 : 0; e.style.strokeDashoffset = s.dash.toFixed(1); });
+  const gl = on ? (.3 + .6 * clamp(s.elec, 0, 1)) * (s.running ? (.8 + .2 * Math.sin(t / 110)) : 1) : 0;
+  CACHE.glows.forEach(e => { e.style.opacity = gl.toFixed(3); });
+  if (CACHE.flames.length) CACHE.flames.forEach((g, i) => {
+    const b = +g.dataset.base, k = Math.max(0.001, (s.flame || 0) * (s.running ? (.85 + .15 * Math.sin(t / 80 + i * 2)) : 1));
+    g.setAttribute('transform', `translate(0 ${b}) scale(1 ${k.toFixed(3)}) translate(0 ${-b})`);
+  });
+  cfg.animate(s, t, rdt, api);
+  uiT += dt; if (uiT > .15) { uiT = 0; updateUI(); }
+  requestAnimationFrame(frame);
+}
+
+function START(modes) {
+  MODES = modes;
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) S.running = false;
+  $('prevB').addEventListener('click', () => S.sel > 1 && select(S.sel - 1));
+  $('nextB').addEventListener('click', () => S.sel < CUR.stages.length && select(S.sel + 1));
+  if (modes.length > 1) {
+    const m = $('modes'); m.hidden = false;
+    m.innerHTML = modes.map((md, i) => `<button type="button" data-i="${i}" aria-pressed="${i === 0}">${md.modeLabel}</button>`).join('');
+    m.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      m.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+      mount(modes[+b.dataset.i]);
+    }));
+  }
+  mount(modes[0]);
+  requestAnimationFrame(t => { last = t; frame(t); });
+}
+
+/* ===== Centrals solars: fotovoltaica i solar tèrmica de torre ===== */
+(function () {
+  const G0f = h => (h > 6 && h < 20) ? 1000 * Math.sin(Math.PI * (h - 6) / 14) : 0;
+  const Gf = (h, n) => G0f(h) * (1 - .8 * n / 100);
+  const showH = v => { const hh = Math.floor(v), mm = Math.round((v - hh) * 60); return `${String(hh % 24).padStart(2, '0')}:${String(mm).padStart(2, '0')} h`; };
+  const sunPos = h => { const a = clamp((h - 6) / 14, 0, 1); return {x: 60 + 880 * a, y: 250 - 195 * Math.sin(Math.PI * a)}; };
+  const commonControls = [
+    {id: 'hora', label: 'Hora del dia', min: 0, max: 24, step: .25, value: 12, show: showH,
+      help: s => G0f(s.c.hora) > 0 ? `Sol a ${fmt0(G0f(s.c.hora))} W/m² si el cel és clar` : 'És de nit: no hi ha sol'},
+    {id: 'nuvols', label: 'Núvols', min: 0, max: 100, step: 10, value: 10, show: v => v + ' %',
+      help: s => s.c.nuvols >= 70 ? 'Cel molt tapat: arriba poca llum' : s.c.nuvols >= 30 ? 'Alguns núvols tapen el sol' : 'Cel força clar'}
+  ];
+  const skyBits = () => `
+      <rect id="night" class="night" x="0" y="0" width="1000" height="470" opacity="0"/>
+      <g id="sunG"><g class="part" data-stage="1">
+        ${[0, 45, 90, 135, 180, 225, 270, 315].map(a => `<line class="sunray" transform="rotate(${a})" x1="0" y1="-30" x2="0" y2="-40"/>`).join('')}
+        <circle class="sun" r="24"/></g></g>
+      ${[[180, 95, 1], [520, 70, 1.2], [820, 120, .9]].map(([x, y, k], i) => `<g id="cl${i}" opacity="0"><g transform="translate(${x} ${y}) scale(${k})"><circle class="cloud" cx="-24" cy="6" r="18"/><circle class="cloud" cx="0" cy="-6" r="24"/><circle class="cloud" cx="26" cy="4" r="18"/><rect class="cloud" x="-42" y="4" width="86" height="20" rx="10"/></g></g>`).join('')}`;
+  function animSky(s, t, dt) {
+    if (s.t.dia && dt > 0) { let h = s.c.hora + dt * .4; if (h >= 24) h -= 24; setCtrl('hora', +h.toFixed(3)); }
+    const h = s.c.hora, g0 = G0f(h), p = sunPos(h);
+    $('sunG').setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`);
+    $('sunG').style.opacity = g0 > 0 ? 1 : 0;
+    $('night').setAttribute('opacity', (.72 * (1 - Math.min(1, g0 / 300))).toFixed(3));
+    const n = s.c.nuvols / 100;
+    for (let i = 0; i < 3; i++) {
+      const c = $('cl' + i); c.setAttribute('opacity', (Math.min(1, n * 1.6 - i * .35)).toFixed(2));
+      c.setAttribute('transform', `translate(${((t / 1000 * (6 + i * 3)) % 200 - 100).toFixed(1)} 0)`);
+    }
+    return p;
+  }
+  const sunChips = `Aporta ${chip('rad')}`;
+  const sunStage = {name: 'El Sol', short: 'Sol', chips: sunChips,
+    text: "El Sol emet energia en forma de llum (energia radiant). Al migdia d'un dia clar, a cada metre quadrat de terra hi arriben uns 1.000 W. Al matí, al vespre o amb núvols n'arriba menys, i de nit, gens.",
+    formula: 'Energia que arriba = irradiància (W/m²) × superfície (m²)',
+    now: s => `Irradiància: ${fmt0(Gf(s.c.hora, s.c.nuvols))} W/m² a les ${showH(s.c.hora)}`,
+    fact: "<b>Sabies que…</b> en només una hora, la Terra rep del Sol més energia que tota la que consumeix la humanitat en un any."};
+
+  /* ---------- FOTOVOLTAICA ---------- */
+  const PVX = [60, 145, 230, 315, 400];
+  let photons = [], electrons;
+  const pv = {
+    modeLabel: 'Central fotovoltaica',
+    eyebrow: "Tecnologia i Digitalització · 2n d'ESO · Energia",
+    title: 'Les centrals solars',
+    intro: "Tria la central fotovoltaica o la solar tèrmica. Canvia l'hora del dia i els núvols, o prem «Fer passar el dia», i segueix el camí de l'energia des de la llum del Sol fins a l'electricitat. Toca cada número del dibuix per saber què passa en aquella part.",
+    aria: 'Central fotovoltaica amb panells sobre seguidors solars, inversor, transformador, línia d\'alta tensió i una cèl·lula solar ampliada',
+    legend: ['rad', 'ele', 'loss'],
+    controls: commonControls,
+    buttons: [{id: 'dia', label: 'Fer passar el dia'}],
+    svg: () => `${C.bg()}${skyBits()}
+      <g class="part" data-stage="1">${PVX.map((x, i) => `<line id="ray${i}" class="ray"/>`).join('')}</g>
+      <g class="part" data-stage="2">
+        ${PVX.map((x, i) => `<line class="post" x1="${x}" y1="430" x2="${x}" y2="470"/><g id="pv${i}"><rect class="pv" x="${x - 36}" y="424" width="72" height="9" rx="1"/><line class="pvline" x1="${x - 34}" y1="428.5" x2="${x + 34}" y2="428.5" stroke-dasharray="7 2"/></g><circle class="steel" cx="${x}" cy="430" r="3"/>`).join('')}
+        ${PVX.slice(1).map(x => C.cable(`M${x},470 L${x},496`)).join('')}
+        ${C.cable('M60,470 L60,496 L540,496 L540,470')}
+        <text class="lbl-s" x="300" y="514" text-anchor="middle">Corrent continu (CC)</text>
+      </g>
+      <g class="part" data-stage="2">
+        <rect class="inset" x="828" y="298" width="162" height="166" rx="10"/>
+        <text class="lbl-m" x="909" y="320" text-anchor="middle">Cèl·lula solar</text>
+        <rect class="nlayer" x="848" y="346" width="118" height="28"/>
+        <rect class="player" x="848" y="374" width="118" height="50"/>
+        <rect class="steel" x="848" y="424" width="118" height="6"/>
+        ${[858, 888, 918, 948].map(x => `<rect class="steel" x="${x}" y="341" width="6" height="6"/>`).join('')}
+        <path class="cable" d="M951,344 L951,334 L978,334 L978,446 L908,446 L908,430"/>
+        <text class="lbl-s" x="856" y="365">N</text><text class="lbl-s" x="856" y="402">P</text>
+        <text class="lbl-s" x="909" y="458" text-anchor="middle">e⁻ → corrent</text>
+        <g id="pPh"></g><g id="pEl"></g>
+      </g>
+      <g class="part" data-stage="3">
+        <rect class="invbox" x="500" y="410" width="80" height="60" rx="6"/>
+        <text class="lbl-m" x="540" y="436" text-anchor="middle">CC</text>
+        <text class="lbl-m" x="540" y="456" text-anchor="middle">→ CA</text>
+        ${C.cable('M580,440 L640,440')}
+      </g>
+      <g class="part" data-stage="4">${C.transformer(640)}</g>
+      <g class="part" data-stage="5">${C.tower(770, 240)}
+        <path class="wire" d="M682,394 Q700,320 724,272"/><path class="flow" d="M682,394 Q700,320 724,272"/>
+        <path class="wire" d="M816,272 Q840,276 1000,262"/><path class="flow" d="M816,272 Q840,276 1000,262"/>
+      </g>
+      ${C.badge(1, 40, 40)}${C.badge(2, 188, 380)}${C.badge(3, 540, 386)}${C.badge(4, 616, 396)}${C.badge(5, 770, 205)}`,
+    stages: [
+      sunStage,
+      {name: 'Panells fotovoltaics', short: 'Panells', chips: `${chip('rad')} ${ARROW} ${chip('ele', 'Elèctrica (CC)')}`,
+        text: "Cada panell està format per cèl·lules de silici, un material semiconductor amb dues capes (N i P). Quan la llum hi arriba, els fotons (partícules de llum) alliberen electrons, que es mouen i formen un corrent elèctric: és l'efecte fotovoltaic. Aquí no gira cap peça. Els panells van sobre seguidors que els fan girar per mirar sempre cap al Sol.",
+        formula: 'Llum → electricitat en corrent continu (CC)',
+        now: s => `Electricitat en corrent continu: ${mw(s.nodes[1])}`,
+        loss: 'Pèrdues: la major part de la llum es converteix en calor (els panells s\'escalfen) o es reflecteix. Un bon panell n\'aprofita un 20–22 %.',
+        fact: "<b>Sabies que…</b> els panells produeixen més un dia fred i assolellat que un dia molt calorós, perquè la calor els fa rendir menys."},
+      {name: 'Inversor', chips: `${chip('ele', 'Elèctrica (CC)')} ${ARROW} ${chip('ele', 'Elèctrica (CA)')}`,
+        text: "Els panells produeixen corrent continu (CC), que sempre circula en el mateix sentit. La xarxa i els aparells de casa funcionen amb corrent altern (CA), que canvia de sentit 50 vegades per segon. L'inversor és un aparell electrònic que transforma el corrent continu en altern.",
+        formula: 'Corrent continu → corrent altern (50 Hz)',
+        now: s => `Electricitat en corrent altern: ${mw(s.nodes[2])}`,
+        loss: 'Pèrdues: una mica de calor als components electrònics.'},
+      {name: 'Transformador', chips: `${chip('ele')} ${ARROW} ${chip('ele', 'Elèctrica (alta tensió)')}`,
+        text: "El transformador eleva la tensió perquè l'electricitat pugui viatjar per la línia d'alta tensió amb poques pèrdues.",
+        formula: 'Baixa tensió → alta tensió',
+        now: s => `Cap a la xarxa: ${mw(s.nodes[3])}`,
+        loss: 'Pèrdues: una mica de calor.'},
+      {name: "Línia d'alta tensió", short: 'Línia AT', chips: `Transporta ${chip('ele')}`,
+        text: "L'electricitat surt cap a la xarxa. De nit, una central fotovoltaica no produeix, i la xarxa ha de fer servir altres centrals o electricitat guardada en bateries.",
+        formula: 'Alta tensió → … → 230 V (a casa)',
+        now: s => `Llars que es poden abastir ara: ≈ ${fmt0(s.out * 1000 / .4)}`,
+        fact: "<b>Sabies que…</b> també es poden posar panells a les teulades de cases i escoles: és l'autoconsum."}
+    ],
+    chain: {
+      nodes: [
+        {e: 'rad', name: 'Energia radiant', where: 'Llum que arriba als panells', stage: 1},
+        {e: 'ele', name: 'Energia elèctrica', where: 'Corrent continu (panells)', stage: 2},
+        {e: 'ele', name: 'Energia elèctrica', where: 'Corrent altern (inversor)', stage: 3},
+        {e: 'ele', name: 'Energia elèctrica', where: 'Cap a la xarxa (alta tensió)', stage: 4}
+      ],
+      conns: ['Panells (efecte fotovoltaic)', 'Inversor', 'Transformador']
+    },
+    balance: [
+      {label: 'Energia elèctrica útil (surt a la xarxa)', c: cv('ele')},
+      {label: 'Llum convertida en calor als panells o reflectida', c: cv('loss')},
+      {label: "Calor a l'inversor", c: cv('loss'), op: .6},
+      {label: 'Calor al transformador', c: cv('loss'), op: .3}
+    ],
+    balanceSub: "L'energia no es crea ni es destrueix: es transforma. La llum que els panells no converteixen en electricitat els escalfa o es reflecteix.",
+    extraLabels: [{k: 'Irradiància', small: 'W per metre quadrat'}, {k: 'CO₂ emès', small: 'mentre funciona'}],
+    extra: s => [{v: fmt0(s.G) + ' W/m²'}, {v: '0 t/h'}],
+    note: s => `Llum que arriba = ${fmt0(s.G)} W/m² × 500.000 m² de panells = <b>${mw(s.nodes[0])}</b>. Els panells n'aprofiten un 21 %.`,
+    questions: [
+      ['Per què de nit no produeix electricitat?', 'Perquè l\'efecte fotovoltaic necessita llum. Posa l\'hora a les 22:00 i mira la cadena.'],
+      ['Per què cal un inversor?', 'Els panells fan corrent continu i la xarxa funciona amb corrent altern. L\'inversor els converteix.'],
+      ['Per què els panells van sobre seguidors?', 'Perquè la llum els arribi tan de cara com sigui possible durant tot el dia. Així produeixen més.'],
+      ['On es perd l\'energia?', 'Als mateixos panells: prop del 80 % de la llum es converteix en calor o es reflecteix.'],
+      ['Quins avantatges té?', 'És renovable, no fa soroll, no emet CO₂ mentre funciona, té poc manteniment i es pot instal·lar a les teulades.'],
+      ['I quins inconvenients?', 'Només produeix quan hi ha llum, depèn dels núvols i les centrals grans ocupen molt de terreny.']
+    ],
+    init(s, api) {
+      s.pvAng = s.pvAng ?? 0;
+      photons = [870, 905, 940].map((x, i) => api.parts('pPh', `M${x},300 L${x},372`, 3, 3, () => cv('rad')));
+      electrons = api.parts('pEl', 'M930,372 L930,346 L951,344 L951,334 L978,334 L978,446 L908,446 L908,430', 9, 2.8, () => cv('ele'));
+    },
+    update(s) {
+      s.G = Gf(s.c.hora, s.c.nuvols);
+      const P0 = s.G * .5, n1 = P0 * .21, n2 = n1 * .97, n3 = n2 * .99;
+      s.nodes = [P0, n1, n2, n3];
+      s.conn = [`−${mw(P0 - n1)} calor i reflexió`, `−${mw(n1 - n2)} calor`, `−${mw(n2 - n3)} calor`];
+      s.segs = [n3, P0 - n1, n1 - n2, n2 - n3];
+      s.out = n3; s.eff = P0 > .01 ? n3 / P0 : null; s.barMax = P0; s.elec = s.G / 1000; s.spin = 0;
+      s.status = G0f(s.c.hora) <= 0 ? 'És de nit: no arriba llum als panells i la central no produeix electricitat.' : (s.G < 150 ? 'Arriba poca llum: la central produeix molt poc.' : '');
+    },
+    animate(s, t, dt) {
+      const p = animSky(s, t, dt);
+      const g0 = G0f(s.c.hora), k = s.G / 1000;
+      const target = g0 > 0 ? clamp((s.c.hora - 13) * 12, -55, 55) : 0;
+      s.pvAng = ease(s.pvAng, target, dt || .016, 3);
+      PVX.forEach((x, i) => {
+        $('pv' + i).setAttribute('transform', `rotate(${s.pvAng.toFixed(1)} ${x} 430)`);
+        const r = $('ray' + i);
+        r.setAttribute('x1', p.x.toFixed(1)); r.setAttribute('y1', p.y.toFixed(1)); r.setAttribute('x2', x); r.setAttribute('y2', 426);
+        r.style.opacity = g0 > 0 ? (.15 + .8 * k).toFixed(2) : 0;
+        r.style.strokeDashoffset = (-t / 1000 * 60 % 14 * (s.running ? 1 : 0)).toFixed(1);
+      });
+      photons.forEach(ph => ph.step(dt, 50, k > .02 ? 1 : 0));
+      electrons.step(dt, 15 + 50 * k, k > .02 ? 1 : 0);
+    }
+  };
+
+  /* ---------- SOLAR TÈRMICA ---------- */
+  const MX = [30, 65, 100, 135, 170, 205, 240], REC = {x: 300, y: 132};
+  const AREA = .24, ETAH = .72, ETAR = .88, D = 56, CAP = 900; // MW per W/m², rendiments, demanda tèrmica (MW), capacitat (MWh)
+  const simCache = {};
+  function simulate(n) {
+    if (simCache[n]) return simCache[n];
+    const step = .05, N = Math.round(24 / step); let L = CAP * .5; const Ls = new Array(N + 1), outs = new Array(N + 1);
+    for (let day = 0; day < 4; day++) for (let i = 0; i <= N; i++) {
+      const h = i * step, Cc = Gf(h, n) * AREA * ETAH * ETAR;
+      const avail = L + Cc * step, want = D * step, o = Math.min(want, avail);
+      L = Math.min(CAP, avail - o);
+      if (day === 3) { Ls[i] = L; outs[i] = o / step; }
+    }
+    return (simCache[n] = {Ls, outs, step});
+  }
+  let hotS, outS, backS, coldS, steamS, feedS;
+  const st = {
+    modeLabel: 'Central solar tèrmica',
+    eyebrow: pv.eyebrow, title: pv.title, intro: pv.intro,
+    aria: "Central solar tèrmica de torre amb heliòstats, receptor, tancs de sals foses, generador de vapor, turbina, alternador, transformador i línia d'alta tensió",
+    legend: ['rad', 'ter', 'mec', 'ele', 'loss'],
+    controls: commonControls,
+    buttons: [{id: 'dia', label: 'Fer passar el dia'}],
+    svg: () => `${C.bg()}${skyBits()}
+      <g class="part" data-stage="1">${MX.map((x, i) => `<line id="ri${i}" class="ray"/>`).join('')}</g>
+      <g class="part" data-stage="2">${MX.map((x, i) => `<line id="rr${i}" class="ray"/>`).join('')}
+        ${MX.map((x, i) => `<line class="post" x1="${x}" y1="442" x2="${x}" y2="470"/><line id="m${i}" class="mirror"/>`).join('')}</g>
+      <g class="part" data-stage="3">
+        <polygon class="concrete" points="285,470 315,470 310,150 290,150"/>
+        <rect id="recGlow" class="receptor-glow" x="280" y="106" width="40" height="52" rx="8" opacity="0"/>
+        <rect class="receptor" x="286" y="112" width="28" height="40" rx="4"/>
+      </g>
+      <g class="part" data-stage="4">
+        ${C.pipe('M304,152 L304,356 L445,356 L445,402', 'hot')}
+        ${C.pipe('M355,402 L355,384 L296,384 L296,152', 'gas')}
+        ${C.pipe('M480,430 L512,430', 'hot')}${C.pipe('M512,452 L500,452 L500,492 L365,492 L365,470', 'gas')}
+        <rect class="tank" x="330" y="402" width="70" height="68" rx="6"/><rect id="coldFill" class="salt-c" x="334" y="440" width="62" height="28" rx="3"/>
+        <rect class="tank" x="410" y="402" width="70" height="68" rx="6"/><rect id="hotFill" class="salt-h" x="414" y="440" width="62" height="28" rx="3"/>
+        <text class="lbl-s" x="365" y="420" text-anchor="middle">Fred</text><text class="lbl-s" x="445" y="420" text-anchor="middle">Calent</text>
+        <g id="pSalt"></g>
+      </g>
+      ${C.hall(500, 300, 260)}
+      <g class="part" data-stage="5">
+        <rect class="sg" x="512" y="330" width="28" height="128" rx="12"/>
+        ${C.pipe('M526,330 L526,315 L548,315 L548,360 L560,360', 'hot')}
+        ${C.pipe('M570,445 L540,445')}
+        <rect class="turb" x="628" y="384" width="20" height="28"/>
+        ${C.condenser(570, 410, 80, 48)}
+        ${C.shaft(548, 742, 360)}
+        ${C.steamTurbine(560, 360, 90, 13, 30)}
+        <g id="pSteam"></g>
+      </g>
+      <g class="part" data-stage="6">${C.gen(662, 360, 72, 46)}${C.cable('M734,360 L752,360 L752,505 L790,505 L790,425 L800,425')}</g>
+      <g class="part" data-stage="7">${C.transformer(800)}${C.tower(930, 240)}
+        <path class="wire" d="M842,394 Q860,320 884,272"/><path class="flow" d="M842,394 Q860,320 884,272"/>
+        <path class="wire" d="M976,272 Q990,274 1000,270"/><path class="flow" d="M976,272 Q990,274 1000,270"/>
+      </g>
+      ${C.badge(1, 40, 40)}${C.badge(2, 135, 396)}${C.badge(3, 338, 112)}${C.badge(4, 380, 325)}${C.badge(5, 600, 318)}${C.badge(6, 700, 318)}${C.badge(7, 772, 392)}`,
+    stages: [
+      sunStage,
+      {name: "Camp d'heliòstats", short: 'Heliòstats', chips: `${chip('rad')} ${ARROW} ${chip('rad', 'Radiant concentrada')}`,
+        text: "Els heliòstats són miralls grans que es mouen durant tot el dia, guiats per ordinador, per reflectir la llum del Sol sempre cap al mateix punt: el receptor de dalt de la torre. Així es concentra la llum de milers de miralls en un espai petit.",
+        formula: 'Llum del Sol → mirall → receptor',
+        now: s => `Llum que arriba als miralls: ${mw(s.nodes[0])}`,
+        loss: 'Pèrdues: part de la llum no arriba al receptor (miralls bruts, ombres, llum que es desvia).',
+        fact: "<b>Sabies que…</b> algunes centrals de torre tenen més de 2.500 heliòstats."},
+      {name: 'Receptor de la torre', short: 'Receptor', chips: `${chip('rad')} ${ARROW} ${chip('ter')}`,
+        text: "Al capdamunt de la torre hi ha el receptor, que rep la llum concentrada i s'escalfa molt. Per dins hi circulen sals foses (sals minerals líquides) que s'escalfen fins a uns 565 °C.",
+        formula: 'Llum concentrada → calor de les sals',
+        now: s => `Calor que s'emporten les sals: ${mw(s.nodes[2])}`,
+        loss: "Pèrdues: el receptor, tan calent, perd calor cap a l'aire.",
+        fact: "<b>Sabies que…</b> la llum concentrada al receptor és unes 1.000 vegades més intensa que la llum normal del Sol."},
+      {name: 'Tancs de sals foses', short: 'Tancs de sals', chips: `Emmagatzema ${chip('ter')}`,
+        text: "Les sals calentes es guarden en un tanc molt ben aïllat. Així la calor del dia es pot fer servir de nit o quan hi ha núvols. Les sals que ja han cedit la calor (a uns 290 °C) van al tanc fred i tornen a pujar a la torre.",
+        formula: 'Dia: es guarda calor · Nit: es gasta la calor guardada',
+        now: s => `Tanc calent: ${fmt0(s.L / CAP * 100)} % ple (≈ ${fmt(s.L / D, 1)} hores de funcionament)`,
+        fact: "<b>Sabies que…</b> la central Gemasolar, a Andalusia, va ser la primera del món d'aquest tipus que podia produir electricitat les 24 hores del dia."},
+      {name: 'Generador de vapor i turbina', short: 'Turbina', chips: `${chip('ter')} ${ARROW} ${chip('mec')}`,
+        text: "Les sals calentes passen pel generador de vapor i fan bullir aigua. El vapor fa girar la turbina, com en qualsevol central tèrmica. Després es refreda al condensador, torna a ser aigua i el cicle comença de nou.",
+        formula: 'Calor de les sals → vapor → gir de la turbina',
+        now: s => `Energia mecànica a la turbina: ${mw(s.nodes[4])}`,
+        loss: 'Pèrdues: com en totes les centrals tèrmiques, molta calor surt pel condensador.'},
+      {name: 'Alternador', chips: `${chip('mec')} ${ARROW} ${chip('ele')}`,
+        text: "La turbina fa girar l'alternador, que transforma l'energia mecànica en elèctrica per inducció electromagnètica.",
+        formula: "Imant que gira dins d'una bobina → corrent elèctric",
+        now: s => `Energia elèctrica produïda: ${mw(s.nodes[5] / .995)}`,
+        loss: 'Pèrdues: calor a les bobines.'},
+      {name: "Transformador i línia d'alta tensió", short: 'Transformador i línia', chips: `${chip('ele')} ${ARROW} ${chip('ele', 'Elèctrica (alta tensió)')}`,
+        text: "El transformador eleva la tensió i l'electricitat surt per la línia d'alta tensió cap a la xarxa. Gràcies als tancs de sals, aquesta central pot continuar enviant electricitat quan el Sol ja s'ha post.",
+        formula: 'Baixa tensió → alta tensió → … → 230 V',
+        now: s => `Cap a la xarxa: ${mw(s.nodes[5])} (≈ ${fmt0(s.out * 1000 / .4)} llars)`}
+    ],
+    chain: {
+      nodes: [
+        {e: 'rad', name: 'Energia radiant', where: 'Llum que arriba als miralls', stage: 1},
+        {e: 'rad', name: 'Energia radiant', where: 'Llum concentrada al receptor', stage: 2},
+        {e: 'ter', name: 'Energia tèrmica', where: 'Sals foses calentes (565 °C)', stage: 3},
+        {e: 'ter', name: 'Energia tèrmica', where: 'Calor que va a fer vapor', stage: 4},
+        {e: 'mec', name: 'Energia mecànica', where: 'Gir de la turbina', stage: 5},
+        {e: 'ele', name: 'Energia elèctrica', where: 'Cap a la xarxa', stage: 7}
+      ],
+      conns: ['Heliòstats', 'Receptor', 'Tancs de sals', 'Vapor i turbina', 'Alternador i transformador']
+    },
+    balance: [
+      {label: 'Energia elèctrica útil (surt a la xarxa)', c: cv('ele')},
+      {label: 'Calor llençada al condensador', c: cv('loss')},
+      {label: "Calor a l'alternador i al transformador", c: cv('loss'), op: .4}
+    ],
+    balanceSub: 'Repartiment de la calor que surt ara del tanc calent cap a la turbina. Abans, als miralls i al receptor, ja s\'havia perdut una part de la llum.',
+    extraLabels: [{k: 'Irradiància', small: 'W per metre quadrat'}, {k: 'Tanc calent', small: ''}],
+    extra: s => [{v: fmt0(s.G) + ' W/m²'}, {v: fmt0(s.L / CAP * 100) + ' % ple', small: `≈ ${fmt(s.L / D, 1)} h de funcionament`}],
+    note: s => `Llum als miralls = ${fmt0(s.G)} W/m² × 240.000 m² de miralls = <b>${mw(s.nodes[0])}</b>. La turbina necessita ${D} MW de calor per funcionar a plena potència.`,
+    questions: [
+      ['Per què aquesta central pot funcionar de nit?', 'Perquè durant el dia guarda part de la calor a les sals foses del tanc calent i la fa servir quan no hi ha sol. Prem «Fer passar el dia» i mira el tanc.'],
+      ['Quina diferència hi ha amb una central fotovoltaica?', 'La fotovoltaica converteix la llum directament en electricitat. La solar tèrmica converteix la llum en calor, la calor en vapor i el vapor fa girar una turbina.'],
+      ['Per què es fan servir sals i no aigua?', 'Les sals foses poden estar líquides a més de 500 °C sense pressió i guarden molta calor. L\'aigua bulliria.'],
+      ['Per què calen tants miralls?', 'Per concentrar molta llum en un punt petit i arribar a temperatures molt altes.'],
+      ['Què passa un dia molt ennuvolat?', 'Els miralls reben poca llum, el tanc no s\'omple i, quan s\'acaba la calor guardada, la central s\'atura. Prova-ho amb el control de núvols.'],
+      ['On es poden construir aquestes centrals?', 'En llocs amb molt de sol directe i pocs núvols, com el sud de la península Ibèrica.']
+    ],
+    init(s, api) {
+      hotS = api.parts('pSalt', 'M304,152 L304,356 L445,356 L445,410', 12, 3.4, () => cv('ter'));
+      outS = api.parts('pSalt', 'M480,430 L512,430', 2, 3.4, () => cv('ter'));
+      backS = api.parts('pSalt', 'M512,452 L500,452 L500,492 L365,492 L365,470', 8, 3.4, () => 'var(--muted)');
+      coldS = api.parts('pSalt', 'M355,402 L355,384 L296,384 L296,152', 12, 3.4, () => 'var(--muted)');
+      steamS = api.parts('pSteam', 'M526,330 L526,315 L548,315 L548,360 L638,360 L638,425', 12, 3.6, q => q < .82 ? cv('ter') : 'var(--muted)');
+      feedS = api.parts('pSteam', 'M570,445 L540,445', 3, 3.2, () => 'var(--water-top)');
+    },
+    update(s) {
+      s.G = Gf(s.c.hora, s.c.nuvols);
+      const sim = simulate(s.c.nuvols), i = Math.round(s.c.hora / sim.step) % sim.Ls.length;
+      s.L = sim.Ls[i];
+      const n0 = s.G * AREA, n1 = n0 * ETAH, n2 = n1 * ETAR, n3 = sim.outs[i], n4 = n3 * .38, n5 = n4 * .985 * .995;
+      s.nodes = [n0, n1, n2, n3, n4, n5];
+      const d = n2 - n3;
+      s.conn = [`−${mw(n0 - n1)} llum perduda`, `−${mw(n1 - n2)} calor`, d > .05 ? `+${mw(d)} es guarden al tanc` : d < -.05 ? `${mw(-d)} surten del tanc` : 'el tanc no canvia', `−${mw(n3 - n4)} al condensador`, `−${mw(n4 - n5)} calor`];
+      s.segs = [n5, n3 - n4, n4 - n5];
+      s.out = n5; s.eff = n5 > .01 ? ETAH * ETAR * .38 * .985 * .995 : null; s.barMax = Math.max(n0, n3);
+      s.elec = n3 / D; s.spin = 450 * Math.sqrt(n3 / D); s.k = n3 / D;
+      s.status = n3 < .05 ? 'No hi ha sol ni calor guardada als tancs: la central està aturada.' : (s.G <= 0 ? 'És de nit, però la central funciona amb la calor guardada al tanc de sals.' : '');
+    },
+    animate(s, t, dt) {
+      const p = animSky(s, t, dt), g0 = G0f(s.c.hora), kL = s.G / 1000;
+      MX.forEach((x, i) => {
+        const my = 442;
+        let nx = 0, ny = -1;
+        if (g0 > 0) {
+          let ax = p.x - x, ay = p.y - my; const la = Math.hypot(ax, ay); ax /= la; ay /= la;
+          let bx = REC.x - x, by = REC.y - my; const lb = Math.hypot(bx, by); bx /= lb; by /= lb;
+          nx = ax + bx; ny = ay + by; const ln = Math.hypot(nx, ny); nx /= ln; ny /= ln;
+        }
+        const dx = -ny * 13, dy = nx * 13, m = $('m' + i);
+        m.setAttribute('x1', (x - dx).toFixed(1)); m.setAttribute('y1', (my - dy).toFixed(1)); m.setAttribute('x2', (x + dx).toFixed(1)); m.setAttribute('y2', (my + dy).toFixed(1));
+        const off = (-t / 1000 * 60 % 14 * (s.running ? 1 : 0)).toFixed(1), op = g0 > 0 ? (.12 + .75 * kL).toFixed(2) : 0;
+        const a = $('ri' + i); a.setAttribute('x1', p.x.toFixed(1)); a.setAttribute('y1', p.y.toFixed(1)); a.setAttribute('x2', x); a.setAttribute('y2', my); a.style.opacity = op; a.style.strokeDashoffset = off;
+        const b = $('rr' + i); b.setAttribute('x1', x); b.setAttribute('y1', my); b.setAttribute('x2', REC.x); b.setAttribute('y2', REC.y + 8); b.style.opacity = op; b.style.strokeDashoffset = off;
+      });
+      $('recGlow').style.opacity = g0 > 0 ? (.2 + .7 * kL) : 0;
+      const f = s.L / CAP, hh = 60 * f, hc = 60 * (1 - f);
+      $('hotFill').setAttribute('y', (468 - hh).toFixed(1)); $('hotFill').setAttribute('height', Math.max(0, hh).toFixed(1));
+      $('coldFill').setAttribute('y', (468 - hc).toFixed(1)); $('coldFill').setAttribute('height', Math.max(0, hc).toFixed(1));
+      const kc = clamp(s.nodes[2] / 100, 0, 1), kt = clamp(s.k, 0, 1);
+      hotS.step(dt, 30 + 60 * kc, kc > .01 ? 1 : 0); coldS.step(dt, 30 + 60 * kc, kc > .01 ? 1 : 0);
+      outS.step(dt, 20 + 40 * kt, kt); backS.step(dt, 20 + 40 * kt, kt);
+      steamS.step(dt, 40 + 120 * kt, kt); feedS.step(dt, 25 + 40 * kt, kt);
+    }
+  };
+  START([pv, st]);
+})();
+
+</script>
+</body>
+</html>
